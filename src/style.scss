@@ -11,14 +11,14 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: #1a1025;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  // Color palette matching the 3D scene
+  // Color palette
   --primary: #a855f7;
   --primary-light: #c084fc;
   --primary-dark: #7c3aed;
@@ -33,9 +33,339 @@
   --text-muted: rgba(255, 255, 255, 0.5);
   --shadow-color: rgba(0, 0, 0, 0.4);
   --glow: rgba(168, 85, 247, 0.4);
+  
+  // Loading screen colors
+  --loading-bg: #2d1b4e;
+  --loading-accent: #6b3fa0;
 }
 
-// Experience Canvas
+// ==========================================
+// LOADING SCREEN
+// ==========================================
+
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1025 0%, var(--loading-bg) 50%, #2d1b4e 100%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(244, 114, 182, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  &.hidden {
+    pointer-events: none;
+  }
+}
+
+.loading-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  padding: 60px 80px;
+  background: rgba(45, 27, 78, 0.6);
+  border-radius: 32px;
+  border: 2px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.5),
+    0 0 100px rgba(168, 85, 247, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 20px rgba(0, 0, 0, 0.2);
+  transform-style: preserve-3d;
+  transform-origin: center center;
+
+  @media (max-width: 600px) {
+    padding: 40px 32px;
+    gap: 32px;
+    margin: 20px;
+  }
+}
+
+.loading-welcome {
+  text-align: center;
+
+  .welcome-sub {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--primary-light);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    margin-bottom: 8px;
+    opacity: 0.9;
+  }
+
+  .welcome-title {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-shadow: 
+      0 4px 20px rgba(168, 85, 247, 0.5),
+      0 2px 0 rgba(0, 0, 0, 0.2);
+    letter-spacing: -0.02em;
+
+    @media (max-width: 600px) {
+      font-size: 2.5rem;
+    }
+  }
+}
+
+.loading-progress {
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary), var(--primary));
+  background-size: 200% 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.progress-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.enter-btn {
+  position: relative;
+  padding: 18px 48px;
+  background: linear-gradient(135deg, #6b3fa0 0%, #4a2875 100%);
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 8px 0 #3d2060,
+    0 12px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+
+    &:hover {
+      transform: none;
+      box-shadow: 
+        0 8px 0 #3d2060,
+        0 12px 20px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  &:not(:disabled):hover {
+    transform: translateY(-4px);
+    box-shadow: 
+      0 12px 0 #3d2060,
+      0 20px 30px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  &:not(:disabled):active {
+    transform: translateY(4px);
+    box-shadow: 
+      0 4px 0 #3d2060,
+      0 6px 10px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-text {
+    position: relative;
+    z-index: 2;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
+
+  &:not(:disabled):hover .btn-shine {
+    left: 100%;
+  }
+}
+
+// Decorative elements
+.loading-decor {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.5;
+  pointer-events: none;
+
+  &.decor-1 {
+    width: 300px;
+    height: 300px;
+    top: -100px;
+    right: -100px;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, transparent 70%);
+    animation: float 6s ease-in-out infinite;
+  }
+
+  &.decor-2 {
+    width: 200px;
+    height: 200px;
+    bottom: -50px;
+    left: -50px;
+    background: radial-gradient(circle, rgba(244, 114, 182, 0.2) 0%, transparent 70%);
+    animation: float 8s ease-in-out infinite reverse;
+  }
+
+  &.decor-3 {
+    width: 150px;
+    height: 150px;
+    top: 50%;
+    left: 10%;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+    animation: float 7s ease-in-out infinite 1s;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+// ==========================================
+// MUSIC TOGGLE
+// ==========================================
+
+.music-toggle {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background: rgba(45, 27, 78, 0.8);
+  border: 2px solid rgba(168, 85, 247, 0.4);
+  border-radius: 16px;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-20px);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(168, 85, 247, 0.1);
+
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  &:hover {
+    background: rgba(168, 85, 247, 0.3);
+    border-color: var(--primary);
+    transform: scale(1.05);
+    box-shadow: 
+      0 8px 30px rgba(0, 0, 0, 0.4),
+      0 0 40px rgba(168, 85, 247, 0.2);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  .music-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+  }
+
+  .music-on {
+    display: block;
+  }
+
+  .music-off {
+    display: none;
+  }
+
+  &.muted {
+    .music-on {
+      display: none;
+    }
+    .music-off {
+      display: block;
+      color: var(--text-muted);
+    }
+  }
+}
+
+// ==========================================
+// EXPERIENCE CANVAS
+// ==========================================
+
 #experience {
   position: fixed;
   top: 0;
@@ -50,6 +380,10 @@
     height: 100%;
   }
 }
+
+// ==========================================
+// MODAL SYSTEM
+// ==========================================
 
 .modal-overlay {
   position: fixed;
@@ -75,7 +409,6 @@
   }
 }
 
-// Base Modal Styles
 .modal {
   position: absolute;
   max-width: 900px;
@@ -189,6 +522,10 @@
   }
 }
 
+// ==========================================
+// ABOUT ME MODAL
+// ==========================================
+
 .modal-aboutme {
   max-width: 720px;
 
@@ -295,6 +632,10 @@
     line-height: 1.7;
   }
 }
+
+// ==========================================
+// EDUCATION MODAL
+// ==========================================
 
 .modal-education {
   max-width: 680px;
@@ -413,6 +754,10 @@
   }
 }
 
+// ==========================================
+// PORTFOLIO MODAL
+// ==========================================
+
 .modal-portfolio {
   max-width: 900px;
 
@@ -455,12 +800,6 @@
       span {
         font-size: 0.9rem;
       }
-    }
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
     }
   }
 
@@ -522,6 +861,10 @@
     }
   }
 }
+
+// ==========================================
+// CERTIFICATE MODAL
+// ==========================================
 
 .modal-certificate {
   max-width: 560px;
@@ -618,6 +961,10 @@
   }
 }
 
+// ==========================================
+// SHARED COMPONENTS
+// ==========================================
+
 .tech-tags {
   display: flex;
   flex-wrap: wrap;
@@ -640,7 +987,6 @@
   }
 }
 
-// Buttons
 .btn {
   display: inline-flex;
   align-items: center;
@@ -691,20 +1037,9 @@
   }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px var(--glow); }
-  50% { box-shadow: 0 0 40px var(--glow); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
+// ==========================================
+// RESPONSIVE
+// ==========================================
 
 @media (max-width: 768px) {
   .modal {
@@ -727,6 +1062,18 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
+    }
+  }
+
+  .music-toggle {
+    top: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+
+    .music-icon {
+      width: 24px;
+      height: 24px;
     }
   }
 }

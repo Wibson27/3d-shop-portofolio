@@ -15,9 +15,142 @@ const yAxisFans = [];
 
 const raycasterObjects = [];
 let currentIntersects = [];
-let hoveredObject = null;  
+let hoveredObject = null;
 
-// Social links (open in new tab)
+// Objects to animate on spawn
+const spawnObjects = {
+  immediate: [],
+  portoSequence: [],
+  sertifSequence: []
+};
+
+const loadingScreen = document.getElementById('loading-screen');
+const progressFill = document.getElementById('progress-fill');
+const progressText = document.getElementById('progress-text');
+const enterBtn = document.getElementById('enter-btn');
+const musicToggle = document.getElementById('music-toggle');
+const bgMusic = document.getElementById('bg-music');
+
+let isLoaded = false;
+let hasEntered = false;
+
+const loadingManager = new THREE.LoadingManager(
+  // onLoad
+  () => {
+    console.log('All resources loaded!');
+    isLoaded = true;
+    progressFill.style.width = '100%';
+    progressText.textContent = 'Ready!';
+    enterBtn.disabled = false;
+    
+    // Add pulse animation to button
+    gsap.to(enterBtn, {
+      scale: 1.02,
+      duration: 0.8,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut"
+    });
+  },
+  // onProgress
+  (itemUrl, itemsLoaded, itemsTotal) => {
+    const progress = Math.round((itemsLoaded / itemsTotal) * 100);
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = `Loading... ${progress}%`;
+  },
+  // onError
+  (url) => {
+    console.error('Error loading:', url);
+  }
+);
+
+// Enter button click handler - 3D collapse animation
+enterBtn.addEventListener('click', () => {
+  if (!isLoaded || hasEntered) return;
+  hasEntered = true;
+
+  // Stop the pulse animation
+  gsap.killTweensOf(enterBtn);
+
+  // Button press animation
+  gsap.to(enterBtn, {
+    scale: 0.9,
+    duration: 0.1,
+    ease: "power2.in",
+    onComplete: () => {
+      gsap.to(enterBtn, {
+        scale: 1,
+        duration: 0.2,
+        ease: "power2.out"
+      });
+    }
+  });
+
+  // Start music
+  bgMusic.volume = 0.5;
+  bgMusic.play().catch(e => console.log('Audio autoplay blocked:', e));
+
+  // Show music toggle
+  setTimeout(() => {
+    musicToggle.classList.add('visible');
+  }, 800);
+
+  // 3D Collapse Animation Timeline
+  const loadingContent = document.querySelector('.loading-content');
+  const tl = gsap.timeline();
+
+  // Phase 1: Button shrinks and loading content zooms out slightly
+  tl.to(loadingContent, {
+    scale: 0.95,
+    duration: 0.3,
+    ease: "power2.in"
+  })
+  
+  // Phase 2: The whole loading screen tilts back like a 3D panel
+  .to(loadingScreen, {
+    rotateX: -15,
+    scale: 0.9,
+    duration: 0.4,
+    ease: "power2.in",
+    transformOrigin: "center bottom"
+  })
+  
+  // Phase 3: Fly up and away into the atmosphere
+  .to(loadingScreen, {
+    y: "-120%",
+    rotateX: -45,
+    scale: 0.7,
+    opacity: 0,
+    duration: 0.8,
+    ease: "power3.in",
+    onComplete: () => {
+      loadingScreen.classList.add('hidden');
+      loadingScreen.style.display = 'none';
+      
+      // Play spawn animations after loading screen is gone
+      playSpawnAnimations();
+    }
+  }, "-=0.1")
+
+  // Add some decorative elements flying away
+  .to('.loading-decor', {
+    y: "-200%",
+    opacity: 0,
+    duration: 0.6,
+    stagger: 0.1,
+    ease: "power2.in"
+  }, "-=0.8");
+});
+
+let isMuted = false;
+
+musicToggle.addEventListener('click', () => {
+  isMuted = !isMuted;
+  bgMusic.muted = isMuted;
+  musicToggle.classList.toggle('muted', isMuted);
+});
+
+// Social links
 const socialLinks = {
   Github: "https://github.com/Wibson27",
   LinkedIn: "https://www.linkedin.com/in/rifqi-wibisono-09703720a/",
@@ -162,14 +295,15 @@ const certificateData = {
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-// Model Loaders
-const textureLoader = new THREE.TextureLoader();
+// Model Loaders with Loading Manager
+const textureLoader = new THREE.TextureLoader(loadingManager);
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('/draco/');
-const gltfLoader = new GLTFLoader();
+const gltfLoader = new GLTFLoader(loadingManager);
 gltfLoader.setDRACOLoader(dracoLoader);
 
-const environmentMap = new THREE.CubeTextureLoader()
+const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager);
+const environmentMap = cubeTextureLoader
   .setPath('skybox/')
   .load([
     'px.webp',
@@ -179,6 +313,8 @@ const environmentMap = new THREE.CubeTextureLoader()
     'pz.webp',
     'nz.webp'
   ]);
+
+environmentMap.colorSpace = THREE.SRGBColorSpace;
 
 const textureMap = {
   Counter: "textures/Counter.webp",
@@ -299,7 +435,6 @@ const modals = {
 
 let currentModal = null;
 
-// Determine which modal to open based on object name
 function getModalType(objectName) {
   if (objectName.includes('AboutMe')) return 'aboutme';
   if (objectName.includes('Education')) return 'education';
@@ -308,9 +443,7 @@ function getModalType(objectName) {
   return null;
 }
 
-// Get the specific key for data lookup
 function getDataKey(objectName) {
-  // Extract the exact key from textureMap keys
   const keys = Object.keys(textureMap);
   for (const key of keys) {
     if (objectName.includes(key)) return key;
@@ -318,7 +451,6 @@ function getDataKey(objectName) {
   return objectName;
 }
 
-// Populate portfolio modal with data
 function populatePortfolioModal(dataKey) {
   const data = portfolioData[dataKey];
   if (!data) return;
@@ -334,7 +466,6 @@ function populatePortfolioModal(dataKey) {
   document.getElementById('portfolio-github').href = data.githubUrl;
 }
 
-// Populate certificate modal with data
 function populateCertificateModal(dataKey) {
   const data = certificateData[dataKey];
   if (!data) return;
@@ -350,14 +481,12 @@ function populateCertificateModal(dataKey) {
   document.getElementById('certificate-link').href = data.verifyUrl;
 }
 
-// Open modal with GSAP animation
 function openModal(modalType, dataKey = null) {
   if (currentModal) return;
   
   const modal = modals[modalType];
   if (!modal) return;
 
-  // Populate data for portfolio/certificate modals
   if (modalType === 'portfolio' && dataKey) {
     populatePortfolioModal(dataKey);
   } else if (modalType === 'certificate' && dataKey) {
@@ -366,11 +495,9 @@ function openModal(modalType, dataKey = null) {
 
   currentModal = modal;
 
-  // Show overlay
   modalOverlay.classList.add('active');
   modal.classList.add('active');
 
-  // GSAP animation
   gsap.fromTo(modalOverlay, 
     { opacity: 0 },
     { opacity: 1, duration: 0.3, ease: "power2.out" }
@@ -392,14 +519,10 @@ function openModal(modalType, dataKey = null) {
     }
   );
 
-  // Animate modal content elements
   const contentElements = modal.querySelectorAll('.modal-header, .about-intro, .about-section, .timeline-item, .portfolio-image, .portfolio-details > *, .certificate-badge, .certificate-details > *');
   
   gsap.fromTo(contentElements,
-    { 
-      opacity: 0, 
-      y: 20 
-    },
+    { opacity: 0, y: 20 },
     { 
       opacity: 1, 
       y: 0, 
@@ -411,7 +534,6 @@ function openModal(modalType, dataKey = null) {
   );
 }
 
-// Close modal with GSAP animation
 function closeModal() {
   if (!currentModal) return;
 
@@ -439,38 +561,49 @@ function closeModal() {
   });
 }
 
-// Close button event listeners
 document.querySelectorAll('.modal-close').forEach(btn => {
   btn.addEventListener('click', closeModal);
 });
 
-// Click outside to close
 modalOverlay.addEventListener('click', (e) => {
   if (e.target === modalOverlay) {
     closeModal();
   }
 });
 
-// Escape key to close
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && currentModal) {
     closeModal();
   }
 });
 
-// Handle 3D object click
+// Click handler with animation
 window.addEventListener('click', () => {
   if (currentIntersects.length > 0) {
     const clickedObject = currentIntersects[0].object;
     const objectName = clickedObject.name;
 
-    // Check if it's a social link
+    // Click bounce animation
+    gsap.to(clickedObject.scale, {
+      x: 1.2, y: 1.2, z: 1.2,
+      duration: 0.15,
+      ease: "power2.out",
+      onComplete: () => {
+        gsap.to(clickedObject.scale, {
+          x: 1.1, y: 1.1, z: 1.1,
+          duration: 0.4,
+          ease: "bounce.out"
+        });
+      }
+    });
+
+    // Handle social links
     if (socialLinks[objectName]) {
       window.open(socialLinks[objectName], '_blank');
       return;
     }
 
-    // Check if it should open a modal
+    // Handle modals
     const modalType = getModalType(objectName);
     if (modalType) {
       const dataKey = getDataKey(objectName);
@@ -479,6 +612,76 @@ window.addEventListener('click', () => {
   }
 });
 
+const portoOrder = ['PortoTwo', 'PortoThree', 'PortoFour', 'PortoFive', 'PortoSix', 'PortoSeven', 'PortoEight'];
+const sertifOrder = ['SertifTwo', 'SertifThree', 'SertifFour', 'SertifFive', 'Sertifsix', 'SertifSeven', 'SertifEight'];
+
+const immediateSpawnNames = ['Github', 'LinkedIn', 'Education', 'AboutMe', 'PortoOne', 'SertifOne'];
+
+function categorizeSpawnObject(child) {
+  const name = child.name;
+  
+  if (name.includes('Email')) return;
+  
+  if (immediateSpawnNames.some(n => name.includes(n))) {
+    spawnObjects.immediate.push(child);
+    return;
+  }
+  
+  for (const portoName of portoOrder) {
+    if (name.includes(portoName)) {
+      spawnObjects.portoSequence.push({ child, order: portoOrder.indexOf(portoName) });
+      return;
+    }
+  }
+  
+  for (const sertifName of sertifOrder) {
+    if (name.includes(sertifName)) {
+      spawnObjects.sertifSequence.push({ child, order: sertifOrder.indexOf(sertifName) });
+      return;
+    }
+  }
+}
+
+function playSpawnAnimations() {
+  spawnObjects.portoSequence.sort((a, b) => a.order - b.order);
+  spawnObjects.sertifSequence.sort((a, b) => a.order - b.order);
+
+  spawnObjects.immediate.forEach(child => {
+    gsap.fromTo(child.scale,
+      { x: 0.01, y: 0.01, z: 0.01 },
+      { 
+        x: 1, y: 1, z: 1,
+        duration: 1.2,
+        ease: "bounce.out"
+      }
+    );
+  });
+
+  spawnObjects.portoSequence.forEach((item, index) => {
+    gsap.fromTo(item.child.scale,
+      { x: 0.01, y: 0.01, z: 0.01 },
+      { 
+        x: 1, y: 1, z: 1,
+        duration: 1.2,
+        ease: "bounce.out",
+        delay: 0.15 * (index + 1)
+      }
+    );
+  });
+
+  spawnObjects.sertifSequence.forEach((item, index) => {
+    gsap.fromTo(item.child.scale,
+      { x: 0.01, y: 0.01, z: 0.01 },
+      { 
+        x: 1, y: 1, z: 1,
+        duration: 1.2,
+        ease: "bounce.out",
+        delay: 0.15 * (index + 1)
+      }
+    );
+  });
+}
+
 gltfLoader.load("models/RifqiShop.glb", (glb) => {
   glb.scene.traverse((child) => {
     if (child.isMesh) {
@@ -486,9 +689,14 @@ gltfLoader.load("models/RifqiShop.glb", (glb) => {
       const clickableNames = ['Porto', 'Sertif', 'Github', 'LinkedIn', 'Email', 'Education', 'AboutMe'];
       if (clickableNames.some(name => child.name.includes(name))) {
         raycasterObjects.push(child);
+        
+        categorizeSpawnObject(child);
+        
+        if (!child.name.includes('Email')) {
+          child.scale.set(0.01, 0.01, 0.01);
+        }
       }
 
-      // Make Trash dark grey
       if (child.name === 'Trash') {
         child.material = new THREE.MeshBasicMaterial({
           color: 0x1a1a1a,
@@ -534,7 +742,10 @@ gltfLoader.load("models/RifqiShop.glb", (glb) => {
     
     }
   });
+  
   scene.add(glb.scene);
+  
+  // NOTE: Spawn animations are triggered after loading screen dismissal
 });
 
 const camera = new THREE.PerspectiveCamera( 75, sizes.width / sizes.height, 0.1, 1000 );
@@ -550,7 +761,6 @@ controls.dampingFactor = 0.02;
 controls.target.set(0, 18, 0);
 controls.update();
 
-// Event Listener
 window.addEventListener('resize', () => {
   sizes.width = window.innerWidth;
   sizes.height = window.innerHeight;
@@ -565,25 +775,34 @@ window.addEventListener('resize', () => {
 const render = () => {
   controls.update();
 
-  // Animate Fans
   yAxisFans.forEach((fan) => {
     fan.rotation.y += 0.05;
   });
 
-  // Raycaster
   raycaster.setFromCamera(pointer, camera);
   currentIntersects = raycaster.intersectObjects(raycasterObjects);
 
-  // Reset previous hovered object
-  if (hoveredObject && !currentIntersects.find(intersect => intersect.object === hoveredObject)) {
-    hoveredObject.material.color.set(0xffffff);
-    hoveredObject = null;
+  const newHovered = currentIntersects.length > 0 ? currentIntersects[0].object : null;
+
+  if (hoveredObject && hoveredObject !== newHovered) {
+    gsap.to(hoveredObject.scale, {
+      x: 1, y: 1, z: 1,
+      duration: 0.3,
+      ease: "power2.out"
+    });
   }
 
-  // Set new hovered object
+  if (newHovered && newHovered !== hoveredObject) {
+    gsap.to(newHovered.scale, {
+      x: 1.1, y: 1.1, z: 1.1,
+      duration: 0.3,
+      ease: "power2.out"
+    });
+  }
+
+  hoveredObject = newHovered;
+
   if (currentIntersects.length > 0) {
-    hoveredObject = currentIntersects[0].object;
-    hoveredObject.material.color.set(0xff0000);
     document.body.style.cursor = 'pointer';
   } else {
     document.body.style.cursor = 'default';
